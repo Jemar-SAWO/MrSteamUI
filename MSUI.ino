@@ -10,8 +10,8 @@
 // ========================================
 // CONFIGURATION - Easy to change values
 // ========================================
-const char *DEVICE_ID = "moy74";
-const char *API_KEY = "730jp";
+const char *DEVICE_ID = "prb51";
+const char *API_KEY = "684se";
 const char *API_BASE_URL = "https://sawo-prod-e25d63ad9b87.herokuapp.com/sauna";
 // ========================================
 
@@ -91,7 +91,7 @@ byte buttonOnPressedInterface_data;
 byte light_data;
 byte nowifi;
 byte nonetwork;
-int maxTemp = 90;  // Maximum temperature limit for this sauna (°C) - change this to adjust the cap
+int maxTemp = 110;  // Maximum temperature limit for this sauna (°C) - change this to adjust the cap
 
 // Hardware timer ISR - toggles LED every 150ms when blinking is enabled
 void IRAM_ATTR onLedTimerISR() {
@@ -383,6 +383,7 @@ void E12() {
   }
 }
 void setup() {
+
   Serial.begin(115200);
   Serial.println("\n\n[BOOT] ESP32 Starting...");
 
@@ -402,7 +403,6 @@ void setup() {
 
   // Check for WiFi test command from provisioning tool before WiFiManager starts
   // This allows testing WiFi hardware without affecting saved credentials
-
 
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, LOW);
@@ -449,8 +449,8 @@ void setup() {
   ICSC.registerCommand('S', &seconds);
   ICSC.registerCommand('E', &error1);
   ICSC.registerCommand('l', &light);
-  // ICSC.send(5, 'A', 1, (char *)&advUser_data);
-  // delay(1);
+  // ICSC.send(5, 'A', 1, (char *)&advUser_data);  //remove for flicker issue
+
   // Serial.println("[ICSC] Commands registered");
 
   // Serial.print("[INTERNET] Smart monitoring: Server retries=");
@@ -533,6 +533,7 @@ void loop() {
     doc["heaterOn"] = false;
     backtoyoutoo_data = false;
   }
+
   String payload;
   serializeJson(doc, payload);
 
@@ -590,8 +591,7 @@ void loop() {
     }
 
   } else {
-    // Serial.println("[HTTP] Request failed!");
-    updateInternetStatus(false);  // HTTP FAILED - will trigger ping verification after 4 failures (if checking is active)
+    updateInternetStatus(false);
   }
 
   http.end();
@@ -642,7 +642,6 @@ void lighttoyoutoo(unsigned char src, char command, unsigned char len, char *dat
 }
 void Temp(unsigned char source, char command, unsigned char len, char *data) {
   Temp_data = *(int *)data;
-
   // Safety limit: cap at maxTemp
   if (Temp_data > maxTemp) {
     Temp_data = maxTemp;
@@ -651,7 +650,6 @@ void Temp(unsigned char source, char command, unsigned char len, char *data) {
     Temp_data = 30;
   }
 }
-
 void error1(unsigned char src, char command, unsigned char len, char *data) {
   error1_data = *data;
   // Serial.print("[ICSC] Received error code: ");
@@ -659,6 +657,10 @@ void error1(unsigned char src, char command, unsigned char len, char *data) {
 }
 void buttonOnPressedInterface(unsigned char source, char command, unsigned char length, char *data) {
   buttonOnPressedInterface_data = *(int *)data;
+  if (buttonOnPressedInterface_data == 2)
+    backtoyoutoo_data = true;
+  else
+    backtoyoutoo_data = false;
 }
 void light(unsigned char source, char command, unsigned char length, char *data) {
   light_data = *data;
