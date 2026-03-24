@@ -7,7 +7,7 @@
 #define sw3 A6
 #define sw1 2
 #define sw2 3
-const uint8_t versionNumber = 55;
+const uint8_t versionNumber = 5;
 const uint8_t digit1 = 18;
 const uint8_t digit2 = 19;
 const uint8_t digit3 = 20;
@@ -137,7 +137,7 @@ byte lastpowerbtn;
 long buttonTimer2;
 
 byte sessionSet_data = 0;
-byte temperatureSet_data = 90;
+byte temperatureSet_data = 110;
 byte fanSet = 1;
 long prevblinkDisplay;
 byte blinkDisplayState = 0;
@@ -616,7 +616,7 @@ void setup() {
   if (tempSet_read == 255) tempSet_read = 80;
   if (HumidSet_read == 255) HumidSet_read = 50;
   if (sessionTime_data == 255) sessionTime_data = 21600;
-   
+
 
 
   // ICSC.registerCommand('new', &onoff);
@@ -657,13 +657,13 @@ void sendtime() {
 
   if (currentMillis - lastMillis >= 8000) {
     lastMillis = currentMillis;
-    down;
+
     tempSet_on;
-    // buttonOnPressed;
+    buttonOnPressed;
     // lightActive;
     ICSC.send(9, 'H', 5, (char *)&down);
     ICSC.send(9, 'tt', 2, (char *)&tempSet_on);
-    // ICSC.send(5, 'W', 1, (char *)&buttonOnPressed);
+    ICSC.send(9, 'w', 1, (char *)&buttonOnPressed);
     // ICSC.send(0, 'l', 1, (char *)&lightActive);
     // ICSC.send(9, 'M', 5, (char *)&mm);
     // ICSC.send(9, 'S', 5, (char *)&ss);
@@ -718,13 +718,14 @@ void lighttoyou(unsigned char source, char command, unsigned char length, char *
 
   if (lighttoyou_data == true) {
     lightActive = 1;
-    ICSC.send(0, 'l', 1, (char *)&lightActive);
-    displayLed(11);
+    // ICSC.send(0, 'l', 1, (char *)&lightActive);
+    // // displayLed(11);
   } else if (lighttoyou_data == false) {
     lightActive = 0;
-    ICSC.send(0, 'l', 1, (char *)&lightActive);
+    // ICSC.send(0, 'l', 1, (char *)&lightActive);
   }
 }
+
 // void onoff(unsigned char src, char command, unsigned char len, char *data) {
 
 //   buttonOnPressedappui_data = *(int *)data;
@@ -788,6 +789,7 @@ void sessionTime(unsigned char source, char command, unsigned char length, char 
     savePoint = 1;
     nextSession = 0;
     savePoints[0] = 1;
+
     down = sessionTime_data;
     ICSC.send(9, 'H', 5, (char *)&down);
     if (down > 300) {
@@ -804,9 +806,9 @@ void sessionTime(unsigned char source, char command, unsigned char length, char 
 
 
 void backtoyou(unsigned char source, char command, unsigned char length, char *data) {
-  delay(500);
+
   backtoyou_data = *data;
-  EEPROM.write(29, backtoyou_data);
+
   unsigned long delayActivateMillis[3];
 
   if (ERROR1_data != 7) {
@@ -862,32 +864,20 @@ void fanDetect(unsigned char src, char command, unsigned char len, char *data) {
   fanDetect_data = *data;
 }
 
-#define MAX_TEMP_C 90
-#define MIN_TEMP_C 30
 void targettemp(unsigned char src, char command, unsigned char len, char *data) {
   tempSet_on_ESP2 = *(int *)data;
-
   if (tempSet_on_ESP2 != prev_tempSet_on_ESP2) {
     prev_tempSet_on_ESP2 = tempSet_on_ESP2;
-
-    // Clamp temperature
-    if (tempSet_on_ESP2 > MAX_TEMP_C) {
-      tempSet_on_ESP2 = MAX_TEMP_C;
-    } else if (tempSet_on_ESP2 < MIN_TEMP_C) {
-      tempSet_on_ESP2 = MIN_TEMP_C;
-    }
-
     intervalBuz = 300;
     pzDetect = 1;
     savePoint = 1;
     nextSession = 0;
     savePoints[0] = 1;
-
     tempSet_on = tempSet_on_ESP2;
     save_tempSet_on = tempSet_on;
     tempSet_on_data = tempSet_on_ESP2;
-
-
+    //sauna_temperature
+    EEPROM.write(3, save_tempSet_on);
     ICSC.send(9, 'tt', 2, (char *)&tempSet_on);
     ICSC.send(5, 'k', 5, (char *)&tempSet_on_data);
   }
@@ -919,11 +909,11 @@ void combi(unsigned char src, char command, unsigned char len, char *data) {
 }
 void temperatureSet(unsigned char src, char command, unsigned char len, char *data) {
   delay(10);
-  tempDATA = *(int *)data;
+  tempDATA = *data;
   if (tempDATA == 0) {
-    temperatureSet_data = 90;
+    temperatureSet_data = 110;
     humidLimit = 55;
-  } else if (tempDATA == 1) {
+  } else {
     temperatureSet_data = 120;
     humidLimit = 65;
   }
@@ -2440,7 +2430,7 @@ void buzzLimit() {
               }
             } else {
               if (combiDetect_data == 2) {
-                if (temperatureSet_data != 90) {
+                if (temperatureSet_data != 110) {
                   if (HumidSet_read >= 65) {
                     fastBeeping();
                   }
@@ -2481,7 +2471,7 @@ void buzzLimit() {
               }
             } else {
               if (combiDetect_data == 2) {
-                if (temperatureSet_data != 90) {
+                if (temperatureSet_data != 110) {
                   if (65 <= humidSet_on) {
                     fastBeeping();
                   }
@@ -2628,7 +2618,7 @@ void off() {
   if (tempDATA == 0) {
     //formula of the curve
     //for temperature settings
-    if (forTemp > 59.6 && forTemp <= 90.0) {
+    if (forTemp > 59.6 && forTemp <= 110.0) {
       y = 100.0 - sqrt((1635.0 / 13.0) * (forTemp - 30.0));
     } else if (forTemp > 52.579 && forTemp <= 59.6) {
       y = 134.35 - 1.6 * forTemp;
@@ -2671,9 +2661,9 @@ void off() {
   switch (buttonOnPressed) {
     case 1:  /////////////////////////////////////////////////////////////////OFF
       if (tempDATA == 0) {
-        if (save_tempSet_on > 90) {
-          save_tempSet_on = 90;
-          save_fahrenheit = 194;
+        if (save_tempSet_on > 110) {
+          save_tempSet_on = 110;
+          save_fahrenheit = 230;
         }
         if (save_humidSet_on > 55) {
           save_humidSet_on = 55;
@@ -2988,7 +2978,7 @@ void off() {
                     tempSet_read = minus(tempSet_read);
                 }
               } else {  //combi mode
-                if (temperatureSet_data != 90) {
+                if (temperatureSet_data != 110) {
                   if (combiDetect_data == 2) {
                     if (65 > HumidSet_read) {
                       if (bothChange == 1)
@@ -3018,7 +3008,7 @@ void off() {
                   }
                   if (combiDetect_data == 1) {
                     if ((int)x2 > HumidSet_read) {
-                      if (HumidSet_read < 90) {
+                      if (HumidSet_read < 110) {
                         if (bothChange == 1)
                           precombifah = plus(precombifah);
                         else
@@ -3179,12 +3169,7 @@ void off() {
             hh = ((plusData / 3600) % 100);
             mm = ((plusData / 60) % 60);
             ss = plusData % 60;
-
             down = plusData;
-
-
-
-
             preRunSet_running = 0;
             preRunSet = 0;
             if (steamerOff_PRERUN == 0) {
@@ -3565,7 +3550,7 @@ void off() {
                   } else {
                     tempSet_on_Fah = combifahrenheit;
                     tempSet_on_data = humidSet_on;
-                    if (temperatureSet_data != 90) {  //limitation temp is in 120
+                    if (temperatureSet_data != 110) {  //limitation temp is in 120
                       if (combiDetect_data == 2) {
                         if (65 > humidSet_on) {
                           if (bothChange == 1) {
@@ -3598,7 +3583,7 @@ void off() {
                       }
                       if (combiDetect_data == 1) {
                         if ((int)x2 > humidSet_on) {
-                          if (humidSet_on < 90) {
+                          if (humidSet_on < 110) {
                             if (bothChange == 1) {
                               combifahrenheit = plus(combifahrenheit);
                             } else {
